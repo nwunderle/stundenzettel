@@ -607,12 +607,12 @@
   </script>
 
   <script>
-    // Service Worker
-    if ('serviceWorker' in navigator) {
+    // Service Worker (nur für HTTPS/localhost)
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('SW registered:', reg))
-          .catch(err => console.log('SW failed:', err));
+          .then(reg => console.log('✓ Offline-Modus aktiviert'))
+          .catch(err => console.log('ℹ App läuft im Online-Modus'));
       });
     }
   </script>
