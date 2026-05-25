@@ -1,0 +1,45 @@
+📦 DIESE DATEIEN AUF GITHUB HOCHLADEN
+=====================================
+
+Folgende 9 Dateien müssen ins GitHub Repository:
+
+✅ index.html           (Haupt-HTML-Datei)
+✅ stundenzettel.jsx    (React-App)
+✅ manifest.json        (PWA-Manifest)
+✅ sw.js                (Service Worker)
+✅ icon.png             (Favicon)
+✅ icon-192.png         (App-Icon 192x192)
+✅ icon-512.png         (App-Icon 512x512)
+✅ .nojekyll            (GitHub Pages Config)
+✅ README.md            (Dokumentation)
+
+
+SCHNELLSTART
+============
+
+1. Neues GitHub Repository erstellen
+   → github.com → "+" → "New repository"
+   → Name: z.B. "stundenzettel"
+   → Public
+   → Create repository
+
+2. Alle 9 Dateien hochladen
+   → "uploading an existing file"
+   → Dateien per Drag & Drop
+   → "Commit changes"
+
+3. GitHub Pages aktivieren
+   → Settings → Pages
+   → Source: "Deploy from a branch"
+   → Branch: "main" + "/root"
+   → Save
+
+4. Nach 2 Minuten aufrufen:
+   https://DEIN-USERNAME.github.io/stundenzettel/
+
+5. Als App installieren
+   iPhone: Safari → Teilen → "Zum Home-Bildschirm"
+   Android: Chrome → Menü → "Zum Startbildschirm"
+
+
+FERTIG! 🎉
