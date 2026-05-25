@@ -10,609 +10,337 @@
   <link rel="icon" href="icon.png" type="image/png">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      background: #f6e7e8;
-    }
-    #root {
-      min-height: 100vh;
-    }
-    .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      color: #4a3a3b;
-      font-style: italic;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { margin: 0; -webkit-font-smoothing: antialiased; background: #f6e7e8; }
+    #root { min-height: 100vh; }
+    .loading { display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #4a3a3b; font-style: italic; font-family: 'DM Sans', sans-serif; }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div class="loading">Laden…</div>
-  </div>
+  <div id="root"><div class="loading">Laden…</div></div>
 
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  
+
   <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
-    const STORAGE_KEY = "garderobe-entries";
+const STORAGE_KEY = "garderobe-entries";
+const pad = (n) => String(n).padStart(2, "0");
+const fmtTime = (h, m) => pad(h) + ":" + pad(m);
+const fmtDate = (d) => new Date(d).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+const fmtDateShort = (d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+const isoDate = (d) => { const dt = new Date(d); return dt.getFullYear() + "-" + pad(dt.getMonth() + 1) + "-" + pad(dt.getDate()); };
+const today = () => isoDate(new Date());
+const diffMinutes = (from, to) => { const [fh, fm] = from.split(":").map(Number); const [th, tm] = to.split(":").map(Number); return (th * 60 + tm) - (fh * 60 + fm); };
+const fmtDuration = (mins) => { if (mins <= 0) return "0:00"; return Math.floor(mins / 60) + ":" + pad(mins % 60); };
+const fmtDurationDecimal = (mins) => (mins / 60).toFixed(2);
+const getWeek = (dateStr) => { const d = new Date(dateStr); const jan1 = new Date(d.getFullYear(), 0, 1); return Math.ceil((Math.floor((d - jan1) / 86400000) + jan1.getDay() + 1) / 7); };
+const getMonth = (dateStr) => dateStr.slice(0, 7);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-    // helpers
-    const pad = (n) => String(n).padStart(2, "0");
-    const fmtTime = (h, m) => \`\${pad(h)}:\${pad(m)}\`;
-    const fmtDate = (d) => {
-      const dt = new Date(d);
-      return dt.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
-    };
-    const fmtDateShort = (d) => {
-      const dt = new Date(d);
-      return dt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
-    };
-    const isoDate = (d) => {
-      const dt = new Date(d);
-      return \`\${dt.getFullYear()}-\${pad(dt.getMonth() + 1)}-\${pad(dt.getDate())}\`;
-    };
-    const today = () => isoDate(new Date());
+function loadEntries() {
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : []; }
+  catch(e) { return []; }
+}
+function saveEntries(entries) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e) { console.error(e); }
+}
 
-    const diffMinutes = (from, to) => {
-      const [fh, fm] = from.split(":").map(Number);
-      const [th, tm] = to.split(":").map(Number);
-      return (th * 60 + tm) - (fh * 60 + fm);
-    };
-    const fmtDuration = (mins) => {
-      if (mins <= 0) return "0:00";
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return \`\${h}:\${pad(m)}\`;
-    };
-    const fmtDurationDecimal = (mins) => (mins / 60).toFixed(2);
+function exportCSV(entries, label) {
+  var header = "Datum;Von;Bis;Pause (min);Dauer (h:mm);Dauer (dezimal);Notiz\n";
+  var rows = entries.map(function(e) {
+    var dur = diffMinutes(e.from, e.to) - (e.pause || 0);
+    return e.date + ";" + e.from + ";" + e.to + ";" + (e.pause || 0) + ";" + fmtDuration(dur) + ";" + fmtDurationDecimal(dur) + ";" + (e.note || "").replace(/;/g, ",");
+  }).join("\n");
+  var blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "Stundenzettel_" + label + ".csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-    const getWeek = (dateStr) => {
-      const d = new Date(dateStr);
-      const jan1 = new Date(d.getFullYear(), 0, 1);
-      const days = Math.floor((d - jan1) / 86400000);
-      return Math.ceil((days + jan1.getDay() + 1) / 7);
-    };
-    const getMonth = (dateStr) => dateStr.slice(0, 7);
+var C = {
+  bg: "#f6e7e8", surface: "#fdf4f5", surfaceAlt: "#f0dcdd",
+  border: "#d9bfc1", borderLight: "#e0c8ca",
+  gold: "#1c1c1c", goldDim: "#3a3a3a", goldBright: "#1c1c1c",
+  text: "#1c1c1c", textDim: "#4a3a3b", textMuted: "#7a6566",
+  accent: "#1c1c1c", danger: "#8b2e2e"
+};
 
-    const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+var S = {
+  app: { fontFamily: "'Space Grotesk', 'DM Sans', sans-serif", background: C.bg, color: C.text, minHeight: "100vh", maxWidth: 520, margin: "0 auto", padding: "0 16px 80px" },
+  header: { textAlign: "center", padding: "28px 0 8px", borderBottom: "1px solid " + C.border, marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: 600, letterSpacing: "0.06em", color: C.gold, margin: 0, textTransform: "uppercase", fontFamily: "'Space Grotesk', 'DM Sans', sans-serif" },
+  subtitle: { fontSize: 13, color: C.textDim, letterSpacing: "0.18em", fontFamily: "'DM Sans', sans-serif", marginTop: 4, textTransform: "uppercase" },
+  nav: { display: "flex", gap: 0, background: C.surface, borderRadius: 10, overflow: "hidden", marginBottom: 20, border: "1px solid " + C.border },
+  navBtn: function(active) { return { flex: 1, padding: "10px 0", border: "none", background: active ? C.gold : "transparent", color: active ? C.bg : C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: active ? 700 : 500, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s" }; },
+  card: { background: C.surface, border: "1px solid " + C.border, borderRadius: 12, padding: 20, marginBottom: 16 },
+  label: { display: "block", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: C.textDim, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 },
+  input: { width: "100%", padding: "10px 12px", background: C.surfaceAlt, border: "1px solid " + C.border, borderRadius: 8, color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 15, outline: "none", boxSizing: "border-box" },
+  row: { display: "flex", gap: 12, marginBottom: 12 },
+  btn: function(variant) {
+    var base = { padding: "11px 20px", border: "none", borderRadius: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: "0.04em", cursor: "pointer", transition: "all 0.15s" };
+    if (variant === "gold") return Object.assign({}, base, { background: C.gold, color: C.bg });
+    if (variant === "accent") return Object.assign({}, base, { background: C.accent, color: "#f6e7e8" });
+    if (variant === "danger") return Object.assign({}, base, { background: "transparent", color: C.danger, border: "1px solid " + C.danger });
+    return Object.assign({}, base, { background: C.surfaceAlt, color: C.textDim, border: "1px solid " + C.border });
+  },
+  timerDisplay: { fontSize: 48, fontWeight: 300, color: C.goldBright, fontFamily: "'Space Grotesk', 'DM Sans', sans-serif", textAlign: "center", letterSpacing: "0.05em", margin: "12px 0", fontVariantNumeric: "tabular-nums" },
+  entryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid " + C.border + "22" },
+  badge: { display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, background: C.gold + "18", color: C.gold, letterSpacing: "0.04em" },
+  summaryBox: { display: "flex", justifyContent: "space-between", padding: "14px 16px", background: C.gold + "0d", borderRadius: 10, border: "1px solid " + C.gold + "25", marginBottom: 16 },
+  summaryVal: { fontSize: 22, fontWeight: 600, color: C.gold, fontFamily: "'Space Grotesk', 'DM Sans', sans-serif" },
+  summaryLabel: { fontSize: 10, fontFamily: "'DM Sans', sans-serif", color: C.textDim, textTransform: "uppercase", letterSpacing: "0.1em" },
+  emptyState: { textAlign: "center", padding: "40px 20px", color: C.textMuted, fontStyle: "italic", fontSize: 15 }
+};
 
-    // storage
-    async function loadEntries() {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
-      } catch { return []; }
+function TimerTab(props) {
+  var onSave = props.onSave;
+  var _r = useState(false), running = _r[0], setRunning = _r[1];
+  var _e = useState(0), elapsed = _e[0], setElapsed = _e[1];
+  var _s = useState(null), startedAt = _s[0], setStartedAt = _s[1];
+  var _n = useState(""), note = _n[0], setNote = _n[1];
+  var _p = useState("0"), pause = _p[0], setPause = _p[1];
+  var intervalRef = useRef(null);
+
+  useEffect(function() {
+    if (running) { intervalRef.current = setInterval(function() { setElapsed(function(e) { return e + 1; }); }, 1000); }
+    else { clearInterval(intervalRef.current); }
+    return function() { clearInterval(intervalRef.current); };
+  }, [running]);
+
+  var handleStart = function() { setStartedAt(new Date()); setElapsed(0); setRunning(true); };
+  var handleStop = function() {
+    setRunning(false);
+    if (startedAt) {
+      var end = new Date();
+      onSave({ id: uid(), date: isoDate(startedAt), from: fmtTime(startedAt.getHours(), startedAt.getMinutes()), to: fmtTime(end.getHours(), end.getMinutes()), pause: parseInt(pause) || 0, note: note, type: "timer" });
+      setNote(""); setPause("0"); setElapsed(0); setStartedAt(null);
     }
-    async function saveEntries(entries) {
-      try { 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); 
-      } catch (e) { 
-        console.error(e); 
-      }
-    }
+  };
 
-    // CSV export
-    function exportCSV(entries, label) {
-      const header = "Datum;Von;Bis;Pause (min);Dauer (h:mm);Dauer (dezimal);Notiz\\n";
-      const rows = entries.map(e => {
-        const dur = diffMinutes(e.from, e.to) - (e.pause || 0);
-        return \`\${e.date};\${e.from};\${e.to};\${e.pause || 0};\${fmtDuration(dur)};\${fmtDurationDecimal(dur)};\${(e.note || "").replace(/;/g, ",")}\`;
-      }).join("\\n");
-      const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = \`Stundenzettel_\${label}.csv\`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+  var hrs = Math.floor(elapsed / 3600);
+  var mins = Math.floor((elapsed % 3600) / 60);
+  var secs = elapsed % 60;
 
-    // palette
-    const C = {
-      bg: "#f6e7e8",
-      surface: "#fdf4f5",
-      surfaceAlt: "#f0dcdd",
-      border: "#d9bfc1",
-      borderLight: "#e0c8ca",
-      gold: "#1c1c1c",
-      goldDim: "#3a3a3a",
-      goldBright: "#1c1c1c",
-      text: "#1c1c1c",
-      textDim: "#4a3a3b",
-      textMuted: "#7a6566",
-      accent: "#1c1c1c",
-      accentDim: "#333",
-      success: "#3a6b4a",
-      danger: "#8b2e2e",
-    };
-
-    // styles
-    const S = {
-      app: {
-        fontFamily: "'Space Grotesk', 'DM Sans', sans-serif",
-        background: C.bg,
-        color: C.text,
-        minHeight: "100vh",
-        maxWidth: 520,
-        margin: "0 auto",
-        padding: "0 16px 80px",
-      },
-      header: {
-        textAlign: "center",
-        padding: "28px 0 8px",
-        borderBottom: \`1px solid \${C.border}\`,
-        marginBottom: 20,
-      },
-      title: {
-        fontSize: 28,
-        fontWeight: 600,
-        letterSpacing: "0.06em",
-        color: C.gold,
-        margin: 0,
-        textTransform: "uppercase",
-        fontFamily: "'Space Grotesk', 'DM Sans', sans-serif",
-      },
-      subtitle: {
-        fontSize: 13,
-        color: C.textDim,
-        letterSpacing: "0.18em",
-        fontFamily: "'DM Sans', sans-serif",
-        marginTop: 4,
-        textTransform: "uppercase",
-      },
-      nav: {
-        display: "flex",
-        gap: 0,
-        background: C.surface,
-        borderRadius: 10,
-        overflow: "hidden",
-        marginBottom: 20,
-        border: \`1px solid \${C.border}\`,
-      },
-      navBtn: (active) => ({
-        flex: 1,
-        padding: "10px 0",
-        border: "none",
-        background: active ? C.gold : "transparent",
-        color: active ? C.bg : C.textDim,
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: 12,
-        fontWeight: active ? 700 : 500,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        cursor: "pointer",
-        transition: "all 0.2s",
-      }),
-      card: {
-        background: C.surface,
-        border: \`1px solid \${C.border}\`,
-        borderRadius: 12,
-        padding: 20,
-        marginBottom: 16,
-      },
-      label: {
-        display: "block",
-        fontSize: 11,
-        fontFamily: "'DM Sans', sans-serif",
-        color: C.textDim,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        marginBottom: 6,
-      },
-      input: {
-        width: "100%",
-        padding: "10px 12px",
-        background: C.surfaceAlt,
-        border: \`1px solid \${C.border}\`,
-        borderRadius: 8,
-        color: C.text,
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: 15,
-        outline: "none",
-        boxSizing: "border-box",
-      },
-      row: { display: "flex", gap: 12, marginBottom: 12 },
-      btn: (variant = "gold") => ({
-        padding: "11px 20px",
-        border: "none",
-        borderRadius: 8,
-        fontFamily: "'DM Sans', sans-serif",
-        fontSize: 13,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        cursor: "pointer",
-        transition: "all 0.15s",
-        ...(variant === "gold" ? { background: C.gold, color: C.bg } :
-          variant === "accent" ? { background: C.accent, color: "#f6e7e8" } :
-          variant === "danger" ? { background: "transparent", color: C.danger, border: \`1px solid \${C.danger}\` } :
-          { background: C.surfaceAlt, color: C.textDim, border: \`1px solid \${C.border}\` }),
-      }),
-      timerDisplay: {
-        fontSize: 48,
-        fontWeight: 300,
-        color: C.goldBright,
-        fontFamily: "'Space Grotesk', 'DM Sans', sans-serif",
-        textAlign: "center",
-        letterSpacing: "0.05em",
-        margin: "12px 0",
-        fontVariantNumeric: "tabular-nums",
-      },
-      entryRow: {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 0",
-        borderBottom: \`1px solid \${C.border}22\`,
-      },
-      badge: {
-        display: "inline-block",
-        padding: "3px 10px",
-        borderRadius: 20,
-        fontSize: 11,
-        fontFamily: "'DM Sans', sans-serif",
-        fontWeight: 600,
-        background: \`\${C.gold}18\`,
-        color: C.gold,
-        letterSpacing: "0.04em",
-      },
-      summaryBox: {
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "14px 16px",
-        background: \`\${C.gold}0d\`,
-        borderRadius: 10,
-        border: \`1px solid \${C.gold}25\`,
-        marginBottom: 16,
-      },
-      summaryVal: {
-        fontSize: 22,
-        fontWeight: 600,
-        color: C.gold,
-        fontFamily: "'Space Grotesk', 'DM Sans', sans-serif",
-      },
-      summaryLabel: {
-        fontSize: 10,
-        fontFamily: "'DM Sans', sans-serif",
-        color: C.textDim,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-      },
-      emptyState: {
-        textAlign: "center",
-        padding: "40px 20px",
-        color: C.textMuted,
-        fontStyle: "italic",
-        fontSize: 15,
-      },
-    };
-
-    // Timer Tab
-    function TimerTab({ onSave }) {
-      const [running, setRunning] = useState(false);
-      const [elapsed, setElapsed] = useState(0);
-      const [startedAt, setStartedAt] = useState(null);
-      const [note, setNote] = useState("");
-      const [pause, setPause] = useState("0");
-      const intervalRef = useRef(null);
-
-      useEffect(() => {
-        if (running) {
-          intervalRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
-        } else {
-          clearInterval(intervalRef.current);
-        }
-        return () => clearInterval(intervalRef.current);
-      }, [running]);
-
-      const handleStart = () => {
-        setStartedAt(new Date());
-        setElapsed(0);
-        setRunning(true);
-      };
-      const handleStop = () => {
-        setRunning(false);
-        if (startedAt) {
-          const end = new Date();
-          const entry = {
-            id: uid(),
-            date: isoDate(startedAt),
-            from: fmtTime(startedAt.getHours(), startedAt.getMinutes()),
-            to: fmtTime(end.getHours(), end.getMinutes()),
-            pause: parseInt(pause) || 0,
-            note,
-            type: "timer",
-          };
-          onSave(entry);
-          setNote("");
-          setPause("0");
-          setElapsed(0);
-          setStartedAt(null);
-        }
-      };
-
-      const hrs = Math.floor(elapsed / 3600);
-      const mins = Math.floor((elapsed % 3600) / 60);
-      const secs = elapsed % 60;
-
-      return (
-        <div style={S.card}>
-          <div style={{ textAlign: "center", marginBottom: 8 }}>
-            <span style={{ ...S.label, display: "inline", marginBottom: 0 }}>
-              {running ? "⏱ Läuft seit " + fmtTime(startedAt.getHours(), startedAt.getMinutes()) : "Timer"}
-            </span>
-          </div>
-          <div style={S.timerDisplay}>
-            {pad(hrs)}:{pad(mins)}:{pad(secs)}
-          </div>
-          <div style={S.row}>
-            <div style={{ flex: 1 }}>
-              <label style={S.label}>Pause (Min)</label>
-              <input style={S.input} type="number" min="0" value={pause} onChange={e => setPause(e.target.value)} />
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Notiz</label>
-            <input style={S.input} type="text" placeholder="z.B. Abendvorstellung, Premiere…" value={note} onChange={e => setNote(e.target.value)} />
-          </div>
-          <div style={{ textAlign: "center" }}>
-            {!running ? (
-              <button style={S.btn("gold")} onClick={handleStart}>▶ Start</button>
-            ) : (
-              <button style={S.btn("accent")} onClick={handleStop}>■ Stop & Speichern</button>
-            )}
-          </div>
+  return (
+    <div style={S.card}>
+      <div style={{ textAlign: "center", marginBottom: 8 }}>
+        <span style={Object.assign({}, S.label, { display: "inline", marginBottom: 0 })}>
+          {running ? "⏱ Läuft seit " + fmtTime(startedAt.getHours(), startedAt.getMinutes()) : "Timer"}
+        </span>
+      </div>
+      <div style={S.timerDisplay}>{pad(hrs)}:{pad(mins)}:{pad(secs)}</div>
+      <div style={S.row}>
+        <div style={{ flex: 1 }}>
+          <label style={S.label}>Pause (Min)</label>
+          <input style={S.input} type="number" min="0" value={pause} onChange={function(e) { setPause(e.target.value); }} />
         </div>
-      );
-    }
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <label style={S.label}>Notiz</label>
+        <input style={S.input} type="text" placeholder="z.B. Abendvorstellung, Premiere…" value={note} onChange={function(e) { setNote(e.target.value); }} />
+      </div>
+      <div style={{ textAlign: "center" }}>
+        {!running ? <button style={S.btn("gold")} onClick={handleStart}>▶ Start</button> : <button style={S.btn("accent")} onClick={handleStop}>■ Stop &amp; Speichern</button>}
+      </div>
+    </div>
+  );
+}
 
-    // Manual Entry Tab
-    function ManualTab({ onSave }) {
-      const [date, setDate] = useState(today());
-      const [from, setFrom] = useState("18:00");
-      const [to, setTo] = useState("23:00");
-      const [pause, setPause] = useState("0");
-      const [note, setNote] = useState("");
-      const [saved, setSaved] = useState(false);
+function ManualTab(props) {
+  var onSave = props.onSave;
+  var _d = useState(today()), date = _d[0], setDate = _d[1];
+  var _f = useState("18:00"), from = _f[0], setFrom = _f[1];
+  var _t = useState("23:00"), to = _t[0], setTo = _t[1];
+  var _p = useState("0"), pause = _p[0], setPause = _p[1];
+  var _n = useState(""), note = _n[0], setNote = _n[1];
+  var _s = useState(false), saved = _s[0], setSaved = _s[1];
 
-      const dur = diffMinutes(from, to) - (parseInt(pause) || 0);
+  var dur = diffMinutes(from, to) - (parseInt(pause) || 0);
 
-      const handleSave = () => {
-        if (dur <= 0) return;
-        onSave({
-          id: uid(),
-          date,
-          from,
-          to,
-          pause: parseInt(pause) || 0,
-          note,
-          type: "manual",
-        });
-        setNote("");
-        setSaved(true);
-        setTimeout(() => setSaved(false), 1500);
-      };
+  var handleSave = function() {
+    if (dur <= 0) return;
+    onSave({ id: uid(), date: date, from: from, to: to, pause: parseInt(pause) || 0, note: note, type: "manual" });
+    setNote(""); setSaved(true); setTimeout(function() { setSaved(false); }, 1500);
+  };
 
-      return (
-        <div style={S.card}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={S.label}>Datum</label>
-            <input style={S.input} type="date" value={date} onChange={e => setDate(e.target.value)} />
-          </div>
-          <div style={S.row}>
-            <div style={{ flex: 1 }}>
-              <label style={S.label}>Von</label>
-              <input style={S.input} type="time" value={from} onChange={e => setFrom(e.target.value)} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={S.label}>Bis</label>
-              <input style={S.input} type="time" value={to} onChange={e => setTo(e.target.value)} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={S.label}>Pause</label>
-              <input style={S.input} type="number" min="0" value={pause} onChange={e => setPause(e.target.value)} />
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={S.label}>Notiz</label>
-            <input style={S.input} type="text" placeholder="z.B. Matinee, Sonderveranstaltung…" value={note} onChange={e => setNote(e.target.value)} />
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ ...S.badge, fontSize: 14, padding: "6px 14px" }}>
-              {dur > 0 ? fmtDuration(dur) + " h" : "–"}
-            </span>
-            <button style={S.btn(saved ? "ghost" : "gold")} onClick={handleSave} disabled={dur <= 0}>
-              {saved ? "✓ Gespeichert" : "Speichern"}
-            </button>
-          </div>
+  return (
+    <div style={S.card}>
+      <div style={{ marginBottom: 12 }}>
+        <label style={S.label}>Datum</label>
+        <input style={S.input} type="date" value={date} onChange={function(e) { setDate(e.target.value); }} />
+      </div>
+      <div style={S.row}>
+        <div style={{ flex: 1 }}><label style={S.label}>Von</label><input style={S.input} type="time" value={from} onChange={function(e) { setFrom(e.target.value); }} /></div>
+        <div style={{ flex: 1 }}><label style={S.label}>Bis</label><input style={S.input} type="time" value={to} onChange={function(e) { setTo(e.target.value); }} /></div>
+        <div style={{ flex: 1 }}><label style={S.label}>Pause</label><input style={S.input} type="number" min="0" value={pause} onChange={function(e) { setPause(e.target.value); }} /></div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <label style={S.label}>Notiz</label>
+        <input style={S.input} type="text" placeholder="z.B. Matinee, Sonderveranstaltung…" value={note} onChange={function(e) { setNote(e.target.value); }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={Object.assign({}, S.badge, { fontSize: 14, padding: "6px 14px" })}>{dur > 0 ? fmtDuration(dur) + " h" : "–"}</span>
+        <button style={S.btn(saved ? "ghost" : "gold")} onClick={handleSave} disabled={dur <= 0}>{saved ? "✓ Gespeichert" : "Speichern"}</button>
+      </div>
+    </div>
+  );
+}
+
+function OverviewTab(props) {
+  var entries = props.entries;
+  var onDelete = props.onDelete;
+  var _v = useState("day"), view = _v[0], setView = _v[1];
+  var _c = useState(null), confirmDel = _c[0], setConfirmDel = _c[1];
+
+  var sorted = entries.slice().sort(function(a, b) {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.from.localeCompare(b.from);
+  });
+
+  var groups = {};
+  sorted.forEach(function(e) {
+    var key;
+    if (view === "day") key = e.date;
+    else if (view === "week") key = e.date.slice(0, 4) + "-KW" + pad(getWeek(e.date));
+    else key = getMonth(e.date);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(e);
+  });
+
+  var months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+  var groupLabel = function(key) {
+    if (view === "day") return fmtDate(key);
+    if (view === "week") return key.replace("-KW", " · KW ");
+    var parts = key.split("-");
+    return months[parseInt(parts[1]) - 1] + " " + parts[0];
+  };
+
+  var groupTotal = function(items) { return items.reduce(function(s, e) { return s + diffMinutes(e.from, e.to) - (e.pause || 0); }, 0); };
+  var allKeys = Object.keys(groups);
+  var totalMins = sorted.reduce(function(s, e) { return s + diffMinutes(e.from, e.to) - (e.pause || 0); }, 0);
+  var viewOpts = [["day", "Tag"], ["week", "Woche"], ["month", "Monat"]];
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        {viewOpts.map(function(item) {
+          return <button key={item[0]} style={Object.assign({}, S.btn(view === item[0] ? "gold" : "ghost"), { padding: "7px 14px", fontSize: 11 })} onClick={function() { setView(item[0]); }}>{item[1]}</button>;
+        })}
+        <div style={{ flex: 1 }} />
+        {sorted.length > 0 && <button style={Object.assign({}, S.btn("ghost"), { padding: "7px 14px", fontSize: 11 })} onClick={function() { exportCSV(sorted, view); }}>↓ CSV</button>}
+      </div>
+
+      {sorted.length > 0 && (
+        <div style={S.summaryBox}>
+          <div><div style={S.summaryVal}>{fmtDuration(totalMins)}</div><div style={S.summaryLabel}>Gesamt (h:mm)</div></div>
+          <div style={{ textAlign: "center" }}><div style={S.summaryVal}>{fmtDurationDecimal(totalMins)}</div><div style={S.summaryLabel}>Dezimal</div></div>
+          <div style={{ textAlign: "right" }}><div style={S.summaryVal}>{sorted.length}</div><div style={S.summaryLabel}>Einträge</div></div>
         </div>
-      );
-    }
+      )}
 
-    // Overview Tab
-    function OverviewTab({ entries, onDelete }) {
-      const [view, setView] = useState("day");
-      const [confirmDel, setConfirmDel] = useState(null);
+      {allKeys.length === 0 && <div style={S.emptyState}>Noch keine Einträge vorhanden.</div>}
 
-      const sorted = [...entries].sort((a, b) => {
-        if (a.date !== b.date) return b.date.localeCompare(a.date);
-        return a.from.localeCompare(b.from);
-      });
-
-      const groups = {};
-      sorted.forEach(e => {
-        const key = view === "day" ? e.date : view === "week" ? \`\${e.date.slice(0, 4)}-KW\${pad(getWeek(e.date))}\` : getMonth(e.date);
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(e);
-      });
-
-      const groupLabel = (key) => {
-        if (view === "day") return fmtDate(key);
-        if (view === "week") return key.replace("-KW", " · KW ");
-        const [y, m] = key.split("-");
-        const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-        return \`\${months[parseInt(m) - 1]} \${y}\`;
-      };
-
-      const groupTotal = (items) => items.reduce((s, e) => s + diffMinutes(e.from, e.to) - (e.pause || 0), 0);
-
-      const allKeys = Object.keys(groups);
-      const totalMins = sorted.reduce((s, e) => s + diffMinutes(e.from, e.to) - (e.pause || 0), 0);
-
-      return (
-        <div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {[["day", "Tag"], ["week", "Woche"], ["month", "Monat"]].map(([k, l]) => (
-              <button key={k} style={{
-                ...S.btn(view === k ? "gold" : "ghost"),
-                padding: "7px 14px",
-                fontSize: 11,
-              }} onClick={() => setView(k)}>{l}</button>
-            ))}
-            <div style={{ flex: 1 }} />
-            {sorted.length > 0 && (
-              <button style={{ ...S.btn("ghost"), padding: "7px 14px", fontSize: 11 }}
-                onClick={() => exportCSV(sorted, view)}>
-                ↓ CSV
-              </button>
-            )}
-          </div>
-
-          {sorted.length > 0 && (
-            <div style={S.summaryBox}>
-              <div>
-                <div style={S.summaryVal}>{fmtDuration(totalMins)}</div>
-                <div style={S.summaryLabel}>Gesamt (h:mm)</div>
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={S.summaryVal}>{fmtDurationDecimal(totalMins)}</div>
-                <div style={S.summaryLabel}>Dezimal</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={S.summaryVal}>{sorted.length}</div>
-                <div style={S.summaryLabel}>Einträge</div>
-              </div>
+      {allKeys.map(function(key) {
+        return (
+          <div key={key} style={Object.assign({}, S.card, { padding: 16 })}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontWeight: 600, fontSize: 15, color: C.gold }}>{groupLabel(key)}</span>
+              <span style={S.badge}>{fmtDuration(groupTotal(groups[key]))} h</span>
             </div>
-          )}
-
-          {allKeys.length === 0 && (
-            <div style={S.emptyState}>Noch keine Einträge vorhanden.</div>
-          )}
-
-          {allKeys.map(key => (
-            <div key={key} style={{ ...S.card, padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontWeight: 600, fontSize: 15, color: C.gold }}>{groupLabel(key)}</span>
-                <span style={S.badge}>{fmtDuration(groupTotal(groups[key]))} h</span>
-              </div>
-              {groups[key].map(e => {
-                const dur = diffMinutes(e.from, e.to) - (e.pause || 0);
-                return (
-                  <div key={e.id} style={S.entryRow}>
-                    <div>
-                      <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
-                        {view !== "day" && <span style={{ color: C.textDim, marginRight: 8 }}>{fmtDateShort(e.date)}</span>}
-                        <span style={{ color: C.text }}>{e.from} – {e.to}</span>
-                        {e.pause > 0 && <span style={{ color: C.textMuted, fontSize: 12, marginLeft: 6 }}>({e.pause}′ Pause)</span>}
-                      </div>
-                      {e.note && <div style={{ fontSize: 12, color: C.textDim, fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>{e.note}</div>}
+            {groups[key].map(function(e) {
+              var dur = diffMinutes(e.from, e.to) - (e.pause || 0);
+              return (
+                <div key={e.id} style={S.entryRow}>
+                  <div>
+                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
+                      {view !== "day" && <span style={{ color: C.textDim, marginRight: 8 }}>{fmtDateShort(e.date)}</span>}
+                      <span style={{ color: C.text }}>{e.from} – {e.to}</span>
+                      {e.pause > 0 && <span style={{ color: C.textMuted, fontSize: 12, marginLeft: 6 }}>({e.pause}′ Pause)</span>}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                      <span style={{ fontFamily: "'Space Grotesk', 'DM Sans', sans-serif", fontSize: 17, color: C.goldDim, fontWeight: 600 }}>
-                        {fmtDuration(dur)}
-                      </span>
-                      {confirmDel === e.id ? (
-                        <button style={{ ...S.btn("danger"), padding: "4px 10px", fontSize: 11 }} onClick={() => { onDelete(e.id); setConfirmDel(null); }}>
-                          Löschen?
-                        </button>
-                      ) : (
-                        <button style={{
-                          background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, padding: "4px 6px",
-                        }} onClick={() => setConfirmDel(e.id)}>✕</button>
-                      )}
-                    </div>
+                    {e.note && <div style={{ fontSize: 12, color: C.textDim, fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>{e.note}</div>}
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      );
-    }
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, color: C.goldDim, fontWeight: 600 }}>{fmtDuration(dur)}</span>
+                    {confirmDel === e.id ? (
+                      <button style={Object.assign({}, S.btn("danger"), { padding: "4px 10px", fontSize: 11 })} onClick={function() { onDelete(e.id); setConfirmDel(null); }}>Löschen?</button>
+                    ) : (
+                      <button style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, padding: "4px 6px" }} onClick={function() { setConfirmDel(e.id); }}>✕</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-    // Main App
-    function App() {
-      const [tab, setTab] = useState("timer");
-      const [entries, setEntries] = useState([]);
-      const [loaded, setLoaded] = useState(false);
+function App() {
+  var _t = useState("timer"), tab = _t[0], setTab = _t[1];
+  var _e = useState([]), entries = _e[0], setEntries = _e[1];
+  var _l = useState(false), loaded = _l[0], setLoaded = _l[1];
 
-      useEffect(() => {
-        loadEntries().then(e => { setEntries(e); setLoaded(true); });
-      }, []);
+  useEffect(function() {
+    var e = loadEntries();
+    setEntries(e);
+    setLoaded(true);
+  }, []);
 
-      useEffect(() => {
-        if (loaded) saveEntries(entries);
-      }, [entries, loaded]);
+  useEffect(function() {
+    if (loaded) saveEntries(entries);
+  }, [entries, loaded]);
 
-      const addEntry = useCallback((entry) => {
-        setEntries(prev => [...prev, entry]);
-      }, []);
+  var addEntry = useCallback(function(entry) {
+    setEntries(function(prev) { return prev.concat([entry]); });
+  }, []);
 
-      const deleteEntry = useCallback((id) => {
-        setEntries(prev => prev.filter(e => e.id !== id));
-      }, []);
+  var deleteEntry = useCallback(function(id) {
+    setEntries(function(prev) { return prev.filter(function(e) { return e.id !== id; }); });
+  }, []);
 
-      if (!loaded) return (
-        <div style={{ ...S.app, display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-          <span style={{ color: C.textDim, fontStyle: "italic" }}>Laden…</span>
-        </div>
-      );
+  if (!loaded) return (
+    <div style={Object.assign({}, S.app, { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" })}>
+      <span style={{ color: C.textDim, fontStyle: "italic" }}>Laden…</span>
+    </div>
+  );
 
-      return (
-        <div style={S.app}>
-          <header style={S.header}>
-            <h1 style={S.title}>Naked without Costume</h1>
-            <div style={S.subtitle}>Stundenzettel</div>
-          </header>
+  var tabs = [["timer", "⏱ Timer"], ["manual", "✎ Eintrag"], ["overview", "☰ Übersicht"]];
 
-          <nav style={S.nav}>
-            {[["timer", "⏱ Timer"], ["manual", "✎ Eintrag"], ["overview", "☰ Übersicht"]].map(([k, l]) => (
-              <button key={k} style={S.navBtn(tab === k)} onClick={() => setTab(k)}>{l}</button>
-            ))}
-          </nav>
+  return (
+    <div style={S.app}>
+      <header style={S.header}>
+        <h1 style={S.title}>Naked without Costume</h1>
+        <div style={S.subtitle}>Stundenzettel</div>
+      </header>
+      <nav style={S.nav}>
+        {tabs.map(function(item) {
+          return <button key={item[0]} style={S.navBtn(tab === item[0])} onClick={function() { setTab(item[0]); }}>{item[1]}</button>;
+        })}
+      </nav>
+      {tab === "timer" && <TimerTab onSave={addEntry} />}
+      {tab === "manual" && <ManualTab onSave={addEntry} />}
+      {tab === "overview" && <OverviewTab entries={entries} onDelete={deleteEntry} />}
+    </div>
+  );
+}
 
-          {tab === "timer" && <TimerTab onSave={addEntry} />}
-          {tab === "manual" && <ManualTab onSave={addEntry} />}
-          {tab === "overview" && <OverviewTab entries={entries} onDelete={deleteEntry} />}
-        </div>
-      );
-    }
-
-    // Render
-    const rootElement = document.getElementById('root');
-    const root = ReactDOM.createRoot(rootElement);
-    root.render(<App />);
+var rootElement = document.getElementById('root');
+var root = ReactDOM.createRoot(rootElement);
+root.render(<App />);
   </script>
 
   <script>
-    // Service Worker (nur für HTTPS/localhost)
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('✓ Offline-Modus aktiviert'))
-          .catch(err => console.log('ℹ App läuft im Online-Modus'));
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function() {});
       });
     }
   </script>
