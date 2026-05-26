@@ -2,346 +2,431 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#f6e7e8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="description" content="Naked without Costume - Stundenzettel">
   <title>Naked without Costume</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { margin: 0; -webkit-font-smoothing: antialiased; background: #f6e7e8; }
-    #root { min-height: 100vh; }
-    .loading { display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #4a3a3b; font-style: italic; font-family: 'DM Sans', sans-serif; }
+    body {
+      font-family: 'Space Grotesk', 'DM Sans', sans-serif;
+      background: #f6e7e8;
+      color: #1c1c1c;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .app { max-width: 520px; margin: 0 auto; padding: 0 16px 80px; }
+
+    /* Header */
+    .header { text-align: center; padding: 28px 0 8px; border-bottom: 1px solid #d9bfc1; margin-bottom: 20px; }
+    .header h1 { font-size: 28px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-family: 'Space Grotesk', sans-serif; color: #1c1c1c; }
+    .header .sub { font-size: 13px; color: #4a3a3b; letter-spacing: 0.18em; font-family: 'DM Sans', sans-serif; margin-top: 4px; text-transform: uppercase; }
+
+    /* Nav */
+    .nav { display: flex; background: #fdf4f5; border-radius: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid #d9bfc1; }
+    .nav button { flex: 1; padding: 10px 0; border: none; background: transparent; color: #4a3a3b; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+    .nav button.active { background: #1c1c1c; color: #f6e7e8; font-weight: 700; }
+
+    /* Card */
+    .card { background: #fdf4f5; border: 1px solid #d9bfc1; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+
+    /* Form */
+    label.lbl { display: block; font-size: 11px; font-family: 'DM Sans', sans-serif; color: #4a3a3b; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+    .field { margin-bottom: 12px; }
+    input[type="date"], input[type="time"], input[type="number"], input[type="text"] {
+      width: 100%; padding: 10px 12px; background: #f0dcdd; border: 1px solid #d9bfc1; border-radius: 8px;
+      color: #1c1c1c; font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; box-sizing: border-box;
+    }
+    .row { display: flex; gap: 12px; margin-bottom: 12px; }
+    .row > div { flex: 1; }
+
+    /* Buttons */
+    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: #1c1c1c; color: #f6e7e8; }
+    .btn-ghost { background: #f0dcdd; color: #4a3a3b; border: 1px solid #d9bfc1; }
+    .btn-danger { background: transparent; color: #8b2e2e; border: 1px solid #8b2e2e; }
+    .btn-sm { padding: 7px 14px; font-size: 11px; }
+    .btn-xs { padding: 4px 10px; font-size: 11px; }
+
+    /* Timer */
+    .timer-display { font-size: 48px; font-weight: 300; color: #1c1c1c; font-family: 'Space Grotesk', sans-serif; text-align: center; letter-spacing: 0.05em; margin: 12px 0; font-variant-numeric: tabular-nums; }
+    .timer-label { text-align: center; margin-bottom: 8px; font-size: 11px; font-family: 'DM Sans', sans-serif; color: #4a3a3b; letter-spacing: 0.12em; text-transform: uppercase; }
+
+    /* Badge */
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; background: #1c1c1c18; color: #1c1c1c; letter-spacing: 0.04em; }
+    .badge-lg { font-size: 14px; padding: 6px 14px; }
+
+    /* Summary */
+    .summary { display: flex; justify-content: space-between; padding: 14px 16px; background: #1c1c1c0d; border-radius: 10px; border: 1px solid #1c1c1c25; margin-bottom: 16px; }
+    .summary-val { font-size: 22px; font-weight: 600; color: #1c1c1c; font-family: 'Space Grotesk', sans-serif; }
+    .summary-lbl { font-size: 10px; font-family: 'DM Sans', sans-serif; color: #4a3a3b; text-transform: uppercase; letter-spacing: 0.1em; }
+
+    /* Entries */
+    .entry-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #d9bfc122; }
+    .entry-time { font-family: 'DM Sans', sans-serif; font-size: 14px; }
+    .entry-note { font-size: 12px; color: #4a3a3b; font-family: 'DM Sans', sans-serif; margin-top: 2px; }
+    .entry-dur { font-family: 'Space Grotesk', sans-serif; font-size: 17px; color: #3a3a3a; font-weight: 600; }
+    .entry-del { background: none; border: none; color: #7a6566; cursor: pointer; font-size: 14px; padding: 4px 6px; }
+    .dim { color: #4a3a3b; margin-right: 8px; }
+    .muted { color: #7a6566; font-size: 12px; margin-left: 6px; }
+    .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .group-title { font-weight: 600; font-size: 15px; color: #1c1c1c; }
+
+    /* View toggle */
+    .view-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+    .view-bar .spacer { flex: 1; }
+
+    /* Empty */
+    .empty { text-align: center; padding: 40px 20px; color: #7a6566; font-style: italic; font-size: 15px; }
+
+    /* Tab content */
+    .tab { display: none; }
+    .tab.active { display: block; }
+
+    /* Flex helpers */
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .flex-center { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .mb-14 { margin-bottom: 14px; }
   </style>
 </head>
 <body>
-  <div id="root"><div class="loading">Laden…</div></div>
+  <div class="app">
+    <header class="header">
+      <h1>Naked without Costume</h1>
+      <div class="sub">Stundenzettel</div>
+    </header>
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <nav class="nav">
+      <button class="active" onclick="switchTab('timer')">⏱ Timer</button>
+      <button onclick="switchTab('manual')">✎ Eintrag</button>
+      <button onclick="switchTab('overview')">☰ Übersicht</button>
+    </nav>
 
-  <script type="text/babel">
-const { useState, useEffect, useCallback, useRef } = React;
-
-const STORAGE_KEY = "garderobe-entries";
-const pad = (n) => String(n).padStart(2, "0");
-const fmtTime = (h, m) => pad(h) + ":" + pad(m);
-const fmtDate = (d) => new Date(d).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
-const fmtDateShort = (d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
-const isoDate = (d) => { const dt = new Date(d); return dt.getFullYear() + "-" + pad(dt.getMonth() + 1) + "-" + pad(dt.getDate()); };
-const today = () => isoDate(new Date());
-const diffMinutes = (from, to) => { const [fh, fm] = from.split(":").map(Number); const [th, tm] = to.split(":").map(Number); return (th * 60 + tm) - (fh * 60 + fm); };
-const fmtDuration = (mins) => { if (mins <= 0) return "0:00"; return Math.floor(mins / 60) + ":" + pad(mins % 60); };
-const fmtDurationDecimal = (mins) => (mins / 60).toFixed(2);
-const getWeek = (dateStr) => { const d = new Date(dateStr); const jan1 = new Date(d.getFullYear(), 0, 1); return Math.ceil((Math.floor((d - jan1) / 86400000) + jan1.getDay() + 1) / 7); };
-const getMonth = (dateStr) => dateStr.slice(0, 7);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-
-function loadEntries() {
-  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : []; }
-  catch(e) { return []; }
-}
-function saveEntries(entries) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e) { console.error(e); }
-}
-
-function exportCSV(entries, label) {
-  var header = "Datum;Von;Bis;Pause (min);Dauer (h:mm);Dauer (dezimal);Notiz\n";
-  var rows = entries.map(function(e) {
-    var dur = diffMinutes(e.from, e.to) - (e.pause || 0);
-    return e.date + ";" + e.from + ";" + e.to + ";" + (e.pause || 0) + ";" + fmtDuration(dur) + ";" + fmtDurationDecimal(dur) + ";" + (e.note || "").replace(/;/g, ",");
-  }).join("\n");
-  var blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = "Stundenzettel_" + label + ".csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-var C = {
-  bg: "#f6e7e8", surface: "#fdf4f5", surfaceAlt: "#f0dcdd",
-  border: "#d9bfc1", borderLight: "#e0c8ca",
-  gold: "#1c1c1c", goldDim: "#3a3a3a", goldBright: "#1c1c1c",
-  text: "#1c1c1c", textDim: "#4a3a3b", textMuted: "#7a6566",
-  accent: "#1c1c1c", danger: "#8b2e2e"
-};
-
-var S = {
-  app: { fontFamily: "'Space Grotesk', 'DM Sans', sans-serif", background: C.bg, color: C.text, minHeight: "100vh", maxWidth: 520, margin: "0 auto", padding: "0 16px 80px" },
-  header: { textAlign: "center", padding: "28px 0 8px", borderBottom: "1px solid " + C.border, marginBottom: 20 },
-  title: { fontSize: 28, fontWeight: 600, letterSpacing: "0.06em", color: C.gold, margin: 0, textTransform: "uppercase", fontFamily: "'Space Grotesk', 'DM Sans', sans-serif" },
-  subtitle: { fontSize: 13, color: C.textDim, letterSpacing: "0.18em", fontFamily: "'DM Sans', sans-serif", marginTop: 4, textTransform: "uppercase" },
-  nav: { display: "flex", gap: 0, background: C.surface, borderRadius: 10, overflow: "hidden", marginBottom: 20, border: "1px solid " + C.border },
-  navBtn: function(active) { return { flex: 1, padding: "10px 0", border: "none", background: active ? C.gold : "transparent", color: active ? C.bg : C.textDim, fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: active ? 700 : 500, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s" }; },
-  card: { background: C.surface, border: "1px solid " + C.border, borderRadius: 12, padding: 20, marginBottom: 16 },
-  label: { display: "block", fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: C.textDim, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 },
-  input: { width: "100%", padding: "10px 12px", background: C.surfaceAlt, border: "1px solid " + C.border, borderRadius: 8, color: C.text, fontFamily: "'DM Sans', sans-serif", fontSize: 15, outline: "none", boxSizing: "border-box" },
-  row: { display: "flex", gap: 12, marginBottom: 12 },
-  btn: function(variant) {
-    var base = { padding: "11px 20px", border: "none", borderRadius: 8, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, letterSpacing: "0.04em", cursor: "pointer", transition: "all 0.15s" };
-    if (variant === "gold") return Object.assign({}, base, { background: C.gold, color: C.bg });
-    if (variant === "accent") return Object.assign({}, base, { background: C.accent, color: "#f6e7e8" });
-    if (variant === "danger") return Object.assign({}, base, { background: "transparent", color: C.danger, border: "1px solid " + C.danger });
-    return Object.assign({}, base, { background: C.surfaceAlt, color: C.textDim, border: "1px solid " + C.border });
-  },
-  timerDisplay: { fontSize: 48, fontWeight: 300, color: C.goldBright, fontFamily: "'Space Grotesk', 'DM Sans', sans-serif", textAlign: "center", letterSpacing: "0.05em", margin: "12px 0", fontVariantNumeric: "tabular-nums" },
-  entryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid " + C.border + "22" },
-  badge: { display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, background: C.gold + "18", color: C.gold, letterSpacing: "0.04em" },
-  summaryBox: { display: "flex", justifyContent: "space-between", padding: "14px 16px", background: C.gold + "0d", borderRadius: 10, border: "1px solid " + C.gold + "25", marginBottom: 16 },
-  summaryVal: { fontSize: 22, fontWeight: 600, color: C.gold, fontFamily: "'Space Grotesk', 'DM Sans', sans-serif" },
-  summaryLabel: { fontSize: 10, fontFamily: "'DM Sans', sans-serif", color: C.textDim, textTransform: "uppercase", letterSpacing: "0.1em" },
-  emptyState: { textAlign: "center", padding: "40px 20px", color: C.textMuted, fontStyle: "italic", fontSize: 15 }
-};
-
-function TimerTab(props) {
-  var onSave = props.onSave;
-  var _r = useState(false), running = _r[0], setRunning = _r[1];
-  var _e = useState(0), elapsed = _e[0], setElapsed = _e[1];
-  var _s = useState(null), startedAt = _s[0], setStartedAt = _s[1];
-  var _n = useState(""), note = _n[0], setNote = _n[1];
-  var _p = useState("0"), pause = _p[0], setPause = _p[1];
-  var intervalRef = useRef(null);
-
-  useEffect(function() {
-    if (running) { intervalRef.current = setInterval(function() { setElapsed(function(e) { return e + 1; }); }, 1000); }
-    else { clearInterval(intervalRef.current); }
-    return function() { clearInterval(intervalRef.current); };
-  }, [running]);
-
-  var handleStart = function() { setStartedAt(new Date()); setElapsed(0); setRunning(true); };
-  var handleStop = function() {
-    setRunning(false);
-    if (startedAt) {
-      var end = new Date();
-      onSave({ id: uid(), date: isoDate(startedAt), from: fmtTime(startedAt.getHours(), startedAt.getMinutes()), to: fmtTime(end.getHours(), end.getMinutes()), pause: parseInt(pause) || 0, note: note, type: "timer" });
-      setNote(""); setPause("0"); setElapsed(0); setStartedAt(null);
-    }
-  };
-
-  var hrs = Math.floor(elapsed / 3600);
-  var mins = Math.floor((elapsed % 3600) / 60);
-  var secs = elapsed % 60;
-
-  return (
-    <div style={S.card}>
-      <div style={{ textAlign: "center", marginBottom: 8 }}>
-        <span style={Object.assign({}, S.label, { display: "inline", marginBottom: 0 })}>
-          {running ? "⏱ Läuft seit " + fmtTime(startedAt.getHours(), startedAt.getMinutes()) : "Timer"}
-        </span>
-      </div>
-      <div style={S.timerDisplay}>{pad(hrs)}:{pad(mins)}:{pad(secs)}</div>
-      <div style={S.row}>
-        <div style={{ flex: 1 }}>
-          <label style={S.label}>Pause (Min)</label>
-          <input style={S.input} type="number" min="0" value={pause} onChange={function(e) { setPause(e.target.value); }} />
-        </div>
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={S.label}>Notiz</label>
-        <input style={S.input} type="text" placeholder="z.B. Abendvorstellung, Premiere…" value={note} onChange={function(e) { setNote(e.target.value); }} />
-      </div>
-      <div style={{ textAlign: "center" }}>
-        {!running ? <button style={S.btn("gold")} onClick={handleStart}>▶ Start</button> : <button style={S.btn("accent")} onClick={handleStop}>■ Stop &amp; Speichern</button>}
-      </div>
-    </div>
-  );
-}
-
-function ManualTab(props) {
-  var onSave = props.onSave;
-  var _d = useState(today()), date = _d[0], setDate = _d[1];
-  var _f = useState("18:00"), from = _f[0], setFrom = _f[1];
-  var _t = useState("23:00"), to = _t[0], setTo = _t[1];
-  var _p = useState("0"), pause = _p[0], setPause = _p[1];
-  var _n = useState(""), note = _n[0], setNote = _n[1];
-  var _s = useState(false), saved = _s[0], setSaved = _s[1];
-
-  var dur = diffMinutes(from, to) - (parseInt(pause) || 0);
-
-  var handleSave = function() {
-    if (dur <= 0) return;
-    onSave({ id: uid(), date: date, from: from, to: to, pause: parseInt(pause) || 0, note: note, type: "manual" });
-    setNote(""); setSaved(true); setTimeout(function() { setSaved(false); }, 1500);
-  };
-
-  return (
-    <div style={S.card}>
-      <div style={{ marginBottom: 12 }}>
-        <label style={S.label}>Datum</label>
-        <input style={S.input} type="date" value={date} onChange={function(e) { setDate(e.target.value); }} />
-      </div>
-      <div style={S.row}>
-        <div style={{ flex: 1 }}><label style={S.label}>Von</label><input style={S.input} type="time" value={from} onChange={function(e) { setFrom(e.target.value); }} /></div>
-        <div style={{ flex: 1 }}><label style={S.label}>Bis</label><input style={S.input} type="time" value={to} onChange={function(e) { setTo(e.target.value); }} /></div>
-        <div style={{ flex: 1 }}><label style={S.label}>Pause</label><input style={S.input} type="number" min="0" value={pause} onChange={function(e) { setPause(e.target.value); }} /></div>
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <label style={S.label}>Notiz</label>
-        <input style={S.input} type="text" placeholder="z.B. Matinee, Sonderveranstaltung…" value={note} onChange={function(e) { setNote(e.target.value); }} />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={Object.assign({}, S.badge, { fontSize: 14, padding: "6px 14px" })}>{dur > 0 ? fmtDuration(dur) + " h" : "–"}</span>
-        <button style={S.btn(saved ? "ghost" : "gold")} onClick={handleSave} disabled={dur <= 0}>{saved ? "✓ Gespeichert" : "Speichern"}</button>
-      </div>
-    </div>
-  );
-}
-
-function OverviewTab(props) {
-  var entries = props.entries;
-  var onDelete = props.onDelete;
-  var _v = useState("day"), view = _v[0], setView = _v[1];
-  var _c = useState(null), confirmDel = _c[0], setConfirmDel = _c[1];
-
-  var sorted = entries.slice().sort(function(a, b) {
-    if (a.date !== b.date) return b.date.localeCompare(a.date);
-    return a.from.localeCompare(b.from);
-  });
-
-  var groups = {};
-  sorted.forEach(function(e) {
-    var key;
-    if (view === "day") key = e.date;
-    else if (view === "week") key = e.date.slice(0, 4) + "-KW" + pad(getWeek(e.date));
-    else key = getMonth(e.date);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(e);
-  });
-
-  var months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-  var groupLabel = function(key) {
-    if (view === "day") return fmtDate(key);
-    if (view === "week") return key.replace("-KW", " · KW ");
-    var parts = key.split("-");
-    return months[parseInt(parts[1]) - 1] + " " + parts[0];
-  };
-
-  var groupTotal = function(items) { return items.reduce(function(s, e) { return s + diffMinutes(e.from, e.to) - (e.pause || 0); }, 0); };
-  var allKeys = Object.keys(groups);
-  var totalMins = sorted.reduce(function(s, e) { return s + diffMinutes(e.from, e.to) - (e.pause || 0); }, 0);
-  var viewOpts = [["day", "Tag"], ["week", "Woche"], ["month", "Monat"]];
-
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {viewOpts.map(function(item) {
-          return <button key={item[0]} style={Object.assign({}, S.btn(view === item[0] ? "gold" : "ghost"), { padding: "7px 14px", fontSize: 11 })} onClick={function() { setView(item[0]); }}>{item[1]}</button>;
-        })}
-        <div style={{ flex: 1 }} />
-        {sorted.length > 0 && <button style={Object.assign({}, S.btn("ghost"), { padding: "7px 14px", fontSize: 11 })} onClick={function() { exportCSV(sorted, view); }}>↓ CSV</button>}
-      </div>
-
-      {sorted.length > 0 && (
-        <div style={S.summaryBox}>
-          <div><div style={S.summaryVal}>{fmtDuration(totalMins)}</div><div style={S.summaryLabel}>Gesamt (h:mm)</div></div>
-          <div style={{ textAlign: "center" }}><div style={S.summaryVal}>{fmtDurationDecimal(totalMins)}</div><div style={S.summaryLabel}>Dezimal</div></div>
-          <div style={{ textAlign: "right" }}><div style={S.summaryVal}>{sorted.length}</div><div style={S.summaryLabel}>Einträge</div></div>
-        </div>
-      )}
-
-      {allKeys.length === 0 && <div style={S.emptyState}>Noch keine Einträge vorhanden.</div>}
-
-      {allKeys.map(function(key) {
-        return (
-          <div key={key} style={Object.assign({}, S.card, { padding: 16 })}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontWeight: 600, fontSize: 15, color: C.gold }}>{groupLabel(key)}</span>
-              <span style={S.badge}>{fmtDuration(groupTotal(groups[key]))} h</span>
-            </div>
-            {groups[key].map(function(e) {
-              var dur = diffMinutes(e.from, e.to) - (e.pause || 0);
-              return (
-                <div key={e.id} style={S.entryRow}>
-                  <div>
-                    <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14 }}>
-                      {view !== "day" && <span style={{ color: C.textDim, marginRight: 8 }}>{fmtDateShort(e.date)}</span>}
-                      <span style={{ color: C.text }}>{e.from} – {e.to}</span>
-                      {e.pause > 0 && <span style={{ color: C.textMuted, fontSize: 12, marginLeft: 6 }}>({e.pause}′ Pause)</span>}
-                    </div>
-                    {e.note && <div style={{ fontSize: 12, color: C.textDim, fontFamily: "'DM Sans', sans-serif", marginTop: 2 }}>{e.note}</div>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 17, color: C.goldDim, fontWeight: 600 }}>{fmtDuration(dur)}</span>
-                    {confirmDel === e.id ? (
-                      <button style={Object.assign({}, S.btn("danger"), { padding: "4px 10px", fontSize: 11 })} onClick={function() { onDelete(e.id); setConfirmDel(null); }}>Löschen?</button>
-                    ) : (
-                      <button style={{ background: "none", border: "none", color: C.textMuted, cursor: "pointer", fontSize: 14, padding: "4px 6px" }} onClick={function() { setConfirmDel(e.id); }}>✕</button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+    <!-- TIMER TAB -->
+    <div id="tab-timer" class="tab active">
+      <div class="card">
+        <div class="timer-label" id="timer-status">Timer</div>
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="row">
+          <div>
+            <label class="lbl">Pause (Min)</label>
+            <input type="number" id="timer-pause" min="0" value="0">
           </div>
-        );
-      })}
+        </div>
+        <div class="mb-14">
+          <label class="lbl">Notiz</label>
+          <input type="text" id="timer-note" placeholder="z.B. Abendvorstellung, Premiere…">
+        </div>
+        <div class="text-center">
+          <button class="btn btn-primary" id="timer-btn" onclick="toggleTimer()">▶ Start</button>
+        </div>
+      </div>
     </div>
-  );
-}
 
-function App() {
-  var _t = useState("timer"), tab = _t[0], setTab = _t[1];
-  var _e = useState([]), entries = _e[0], setEntries = _e[1];
-  var _l = useState(false), loaded = _l[0], setLoaded = _l[1];
-
-  useEffect(function() {
-    var e = loadEntries();
-    setEntries(e);
-    setLoaded(true);
-  }, []);
-
-  useEffect(function() {
-    if (loaded) saveEntries(entries);
-  }, [entries, loaded]);
-
-  var addEntry = useCallback(function(entry) {
-    setEntries(function(prev) { return prev.concat([entry]); });
-  }, []);
-
-  var deleteEntry = useCallback(function(id) {
-    setEntries(function(prev) { return prev.filter(function(e) { return e.id !== id; }); });
-  }, []);
-
-  if (!loaded) return (
-    <div style={Object.assign({}, S.app, { display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" })}>
-      <span style={{ color: C.textDim, fontStyle: "italic" }}>Laden…</span>
+    <!-- MANUAL TAB -->
+    <div id="tab-manual" class="tab">
+      <div class="card">
+        <div class="field">
+          <label class="lbl">Datum</label>
+          <input type="date" id="manual-date">
+        </div>
+        <div class="row">
+          <div><label class="lbl">Von</label><input type="time" id="manual-from" value="18:00"></div>
+          <div><label class="lbl">Bis</label><input type="time" id="manual-to" value="23:00"></div>
+          <div><label class="lbl">Pause</label><input type="number" id="manual-pause" min="0" value="0"></div>
+        </div>
+        <div class="mb-14">
+          <label class="lbl">Notiz</label>
+          <input type="text" id="manual-note" placeholder="z.B. Matinee, Sonderveranstaltung…">
+        </div>
+        <div class="flex-between">
+          <span class="badge badge-lg" id="manual-dur">5:00 h</span>
+          <button class="btn btn-primary" onclick="saveManual()">Speichern</button>
+        </div>
+      </div>
     </div>
-  );
 
-  var tabs = [["timer", "⏱ Timer"], ["manual", "✎ Eintrag"], ["overview", "☰ Übersicht"]];
-
-  return (
-    <div style={S.app}>
-      <header style={S.header}>
-        <h1 style={S.title}>Naked without Costume</h1>
-        <div style={S.subtitle}>Stundenzettel</div>
-      </header>
-      <nav style={S.nav}>
-        {tabs.map(function(item) {
-          return <button key={item[0]} style={S.navBtn(tab === item[0])} onClick={function() { setTab(item[0]); }}>{item[1]}</button>;
-        })}
-      </nav>
-      {tab === "timer" && <TimerTab onSave={addEntry} />}
-      {tab === "manual" && <ManualTab onSave={addEntry} />}
-      {tab === "overview" && <OverviewTab entries={entries} onDelete={deleteEntry} />}
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview" class="tab">
+      <div class="view-bar">
+        <button class="btn btn-primary btn-sm" id="vbtn-day" onclick="setView('day')">Tag</button>
+        <button class="btn btn-ghost btn-sm" id="vbtn-week" onclick="setView('week')">Woche</button>
+        <button class="btn btn-ghost btn-sm" id="vbtn-month" onclick="setView('month')">Monat</button>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="doExport()">↓ CSV</button>
+      </div>
+      <div id="overview-summary"></div>
+      <div id="overview-list"></div>
     </div>
-  );
-}
+  </div>
 
-var rootElement = document.getElementById('root');
-var root = ReactDOM.createRoot(rootElement);
-root.render(<App />);
+  <script>
+    // ── State ─────────────────────────────────────────────
+    var STORAGE_KEY = "nwc-entries";
+    var entries = [];
+    var timerRunning = false;
+    var timerStart = null;
+    var timerInterval = null;
+    var timerElapsed = 0;
+    var currentTab = "timer";
+    var currentView = "day";
+    var confirmDelId = null;
+
+    // ── Helpers ───────────────────────────────────────────
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function fmtTime(h, m) { return pad(h) + ":" + pad(m); }
+    function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+    function todayStr() { return isoDate(new Date()); }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+    function diffMin(from, to) {
+      var fp = from.split(":").map(Number);
+      var tp = to.split(":").map(Number);
+      return (tp[0] * 60 + tp[1]) - (fp[0] * 60 + fp[1]);
+    }
+    function fmtDur(mins) {
+      if (mins <= 0) return "0:00";
+      return Math.floor(mins / 60) + ":" + pad(mins % 60);
+    }
+    function fmtDec(mins) { return (mins / 60).toFixed(2); }
+
+    function fmtDateDE(ds) {
+      return new Date(ds).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+    function fmtDateShort(ds) {
+      return new Date(ds).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+    }
+    function getWeek(ds) {
+      var d = new Date(ds);
+      var jan1 = new Date(d.getFullYear(), 0, 1);
+      return Math.ceil((Math.floor((d - jan1) / 86400000) + jan1.getDay() + 1) / 7);
+    }
+
+    // ── Storage ───────────────────────────────────────────
+    function load() {
+      try { var s = localStorage.getItem(STORAGE_KEY); entries = s ? JSON.parse(s) : []; }
+      catch(e) { entries = []; }
+    }
+    function save() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e) {}
+    }
+
+    // ── Tab Switching ─────────────────────────────────────
+    function switchTab(name) {
+      currentTab = name;
+      document.querySelectorAll(".tab").forEach(function(el) { el.classList.remove("active"); });
+      document.getElementById("tab-" + name).classList.add("active");
+      document.querySelectorAll(".nav button").forEach(function(btn) { btn.classList.remove("active"); });
+      var labels = { timer: 0, manual: 1, overview: 2 };
+      document.querySelectorAll(".nav button")[labels[name]].classList.add("active");
+      if (name === "overview") renderOverview();
+      if (name === "manual") updateManualDur();
+    }
+
+    // ── Timer ─────────────────────────────────────────────
+    function toggleTimer() {
+      if (!timerRunning) {
+        timerStart = new Date();
+        timerElapsed = 0;
+        timerRunning = true;
+        document.getElementById("timer-btn").textContent = "■ Stop & Speichern";
+        document.getElementById("timer-btn").className = "btn btn-primary";
+        document.getElementById("timer-status").textContent = "⏱ Läuft seit " + fmtTime(timerStart.getHours(), timerStart.getMinutes());
+        timerInterval = setInterval(function() {
+          timerElapsed++;
+          var h = Math.floor(timerElapsed / 3600);
+          var m = Math.floor((timerElapsed % 3600) / 60);
+          var s = timerElapsed % 60;
+          document.getElementById("timer-display").textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
+        }, 1000);
+      } else {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        var end = new Date();
+        var p = parseInt(document.getElementById("timer-pause").value) || 0;
+        var n = document.getElementById("timer-note").value;
+        entries.push({
+          id: uid(),
+          date: isoDate(timerStart),
+          from: fmtTime(timerStart.getHours(), timerStart.getMinutes()),
+          to: fmtTime(end.getHours(), end.getMinutes()),
+          pause: p,
+          note: n
+        });
+        save();
+        document.getElementById("timer-pause").value = "0";
+        document.getElementById("timer-note").value = "";
+        document.getElementById("timer-display").textContent = "00:00:00";
+        document.getElementById("timer-btn").textContent = "▶ Start";
+        document.getElementById("timer-status").textContent = "✓ Gespeichert!";
+        setTimeout(function() { document.getElementById("timer-status").textContent = "Timer"; }, 1500);
+        timerElapsed = 0;
+        timerStart = null;
+      }
+    }
+
+    // ── Manual ────────────────────────────────────────────
+    function updateManualDur() {
+      var from = document.getElementById("manual-from").value || "18:00";
+      var to = document.getElementById("manual-to").value || "23:00";
+      var p = parseInt(document.getElementById("manual-pause").value) || 0;
+      var dur = diffMin(from, to) - p;
+      document.getElementById("manual-dur").textContent = dur > 0 ? fmtDur(dur) + " h" : "–";
+    }
+
+    function saveManual() {
+      var from = document.getElementById("manual-from").value;
+      var to = document.getElementById("manual-to").value;
+      var p = parseInt(document.getElementById("manual-pause").value) || 0;
+      var dur = diffMin(from, to) - p;
+      if (dur <= 0) return;
+      entries.push({
+        id: uid(),
+        date: document.getElementById("manual-date").value,
+        from: from,
+        to: to,
+        pause: p,
+        note: document.getElementById("manual-note").value
+      });
+      save();
+      document.getElementById("manual-note").value = "";
+      var btn = document.querySelector("#tab-manual .btn-primary");
+      btn.textContent = "✓ Gespeichert";
+      setTimeout(function() { btn.textContent = "Speichern"; }, 1500);
+    }
+
+    // ── Overview ──────────────────────────────────────────
+    function setView(v) {
+      currentView = v;
+      ["day", "week", "month"].forEach(function(k) {
+        document.getElementById("vbtn-" + k).className = k === v ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
+      });
+      renderOverview();
+    }
+
+    function renderOverview() {
+      var sorted = entries.slice().sort(function(a, b) {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        return a.from.localeCompare(b.from);
+      });
+
+      // Summary
+      var sumEl = document.getElementById("overview-summary");
+      if (sorted.length > 0) {
+        var total = sorted.reduce(function(s, e) { return s + diffMin(e.from, e.to) - (e.pause || 0); }, 0);
+        sumEl.innerHTML = '<div class="summary">' +
+          '<div><div class="summary-val">' + fmtDur(total) + '</div><div class="summary-lbl">Gesamt (h:mm)</div></div>' +
+          '<div class="text-center"><div class="summary-val">' + fmtDec(total) + '</div><div class="summary-lbl">Dezimal</div></div>' +
+          '<div class="text-right"><div class="summary-val">' + sorted.length + '</div><div class="summary-lbl">Einträge</div></div>' +
+          '</div>';
+      } else {
+        sumEl.innerHTML = '';
+      }
+
+      // Group
+      var groups = {};
+      var months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+      sorted.forEach(function(e) {
+        var key;
+        if (currentView === "day") key = e.date;
+        else if (currentView === "week") key = e.date.slice(0, 4) + "-KW" + pad(getWeek(e.date));
+        else key = e.date.slice(0, 7);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(e);
+      });
+
+      var listEl = document.getElementById("overview-list");
+      var keys = Object.keys(groups);
+      if (keys.length === 0) {
+        listEl.innerHTML = '<div class="empty">Noch keine Einträge vorhanden.</div>';
+        return;
+      }
+
+      var html = "";
+      keys.forEach(function(key) {
+        var items = groups[key];
+        var gTotal = items.reduce(function(s, e) { return s + diffMin(e.from, e.to) - (e.pause || 0); }, 0);
+
+        var label;
+        if (currentView === "day") label = fmtDateDE(key);
+        else if (currentView === "week") label = key.replace("-KW", " · KW ");
+        else { var p = key.split("-"); label = months[parseInt(p[1]) - 1] + " " + p[0]; }
+
+        html += '<div class="card" style="padding:16px">';
+        html += '<div class="group-header"><span class="group-title">' + label + '</span><span class="badge">' + fmtDur(gTotal) + ' h</span></div>';
+
+        items.forEach(function(e) {
+          var dur = diffMin(e.from, e.to) - (e.pause || 0);
+          html += '<div class="entry-row">';
+          html += '<div>';
+          html += '<div class="entry-time">';
+          if (currentView !== "day") html += '<span class="dim">' + fmtDateShort(e.date) + '</span>';
+          html += '<span>' + e.from + ' – ' + e.to + '</span>';
+          if (e.pause > 0) html += '<span class="muted">(' + e.pause + '′ Pause)</span>';
+          html += '</div>';
+          if (e.note) html += '<div class="entry-note">' + e.note + '</div>';
+          html += '</div>';
+          html += '<div class="flex-center">';
+          html += '<span class="entry-dur">' + fmtDur(dur) + '</span>';
+          if (confirmDelId === e.id) {
+            html += '<button class="btn btn-danger btn-xs" onclick="deleteEntry(\'' + e.id + '\')">Löschen?</button>';
+          } else {
+            html += '<button class="entry-del" onclick="confirmDel(\'' + e.id + '\')">✕</button>';
+          }
+          html += '</div></div>';
+        });
+
+        html += '</div>';
+      });
+      listEl.innerHTML = html;
+    }
+
+    function confirmDel(id) { confirmDelId = id; renderOverview(); }
+    function deleteEntry(id) {
+      entries = entries.filter(function(e) { return e.id !== id; });
+      save();
+      confirmDelId = null;
+      renderOverview();
+    }
+
+    // ── CSV Export ─────────────────────────────────────────
+    function doExport() {
+      if (entries.length === 0) return;
+      var sorted = entries.slice().sort(function(a, b) { return a.date.localeCompare(b.date); });
+      var header = "Datum;Von;Bis;Pause (min);Dauer (h:mm);Dauer (dezimal);Notiz\n";
+      var rows = sorted.map(function(e) {
+        var dur = diffMin(e.from, e.to) - (e.pause || 0);
+        return e.date + ";" + e.from + ";" + e.to + ";" + (e.pause || 0) + ";" + fmtDur(dur) + ";" + fmtDec(dur) + ";" + (e.note || "").replace(/;/g, ",");
+      }).join("\n");
+      var blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "Stundenzettel.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ── Init ──────────────────────────────────────────────
+    load();
+    document.getElementById("manual-date").value = todayStr();
+    document.querySelectorAll("#tab-manual input").forEach(function(el) {
+      el.addEventListener("input", updateManualDur);
+    });
+    updateManualDur();
   </script>
 
   <script>
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js').catch(function() {});
-      });
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
     }
   </script>
 </body>
