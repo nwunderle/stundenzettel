@@ -1,6 +1,6 @@
 # Garderobe Stundenzettel PWA
 
-Eine Progressive Web App zur Zeiterfassung für Garderobiere.
+Eine Progressive Web App zur Zeiterfassung für Garderobiere. 
 
 ## Features
 
