@@ -95,6 +95,15 @@
     .text-center { text-align: center; }
     .text-right { text-align: right; }
     .mb-14 { margin-bottom: 14px; }
+
+    /* Edit form inline */
+    .edit-form { background: #f0dcdd; border: 1px solid #d9bfc1; border-radius: 10px; padding: 14px; margin: 8px 0; }
+    .edit-form .row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .edit-form .row > div { flex: 1; }
+    .edit-form label { display: block; font-size: 10px; font-family: 'DM Sans', sans-serif; color: #4a3a3b; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 3px; }
+    .edit-form input { width: 100%; padding: 7px 8px; background: #fdf4f5; border: 1px solid #d9bfc1; border-radius: 6px; color: #1c1c1c; font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; box-sizing: border-box; }
+    .edit-form .edit-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    .entry-edit { background: none; border: none; color: #7a6566; cursor: pointer; font-size: 13px; padding: 4px 6px; }
   </style>
 </head>
 <body>
@@ -179,6 +188,7 @@
     var currentTab = "timer";
     var currentView = "day";
     var confirmDelId = null;
+    var editId = null;
 
     // ── Helpers ───────────────────────────────────────────
     function pad(n) { return String(n).padStart(2, "0"); }
@@ -365,23 +375,45 @@
 
         items.forEach(function(e) {
           var dur = diffMin(e.from, e.to) - (e.pause || 0);
-          html += '<div class="entry-row">';
-          html += '<div>';
-          html += '<div class="entry-time">';
-          if (currentView !== "day") html += '<span class="dim">' + fmtDateShort(e.date) + '</span>';
-          html += '<span>' + e.from + ' – ' + e.to + '</span>';
-          if (e.pause > 0) html += '<span class="muted">(' + e.pause + '′ Pause)</span>';
-          html += '</div>';
-          if (e.note) html += '<div class="entry-note">' + e.note + '</div>';
-          html += '</div>';
-          html += '<div class="flex-center">';
-          html += '<span class="entry-dur">' + fmtDur(dur) + '</span>';
-          if (confirmDelId === e.id) {
-            html += '<button class="btn btn-danger btn-xs" onclick="deleteEntry(\'' + e.id + '\')">Löschen?</button>';
+
+          if (editId === e.id) {
+            // Inline edit form
+            html += '<div class="edit-form">';
+            html += '<div class="row">';
+            html += '<div><label>Datum</label><input type="date" id="edit-date" value="' + e.date + '"></div>';
+            html += '</div>';
+            html += '<div class="row">';
+            html += '<div><label>Von</label><input type="time" id="edit-from" value="' + e.from + '"></div>';
+            html += '<div><label>Bis</label><input type="time" id="edit-to" value="' + e.to + '"></div>';
+            html += '<div><label>Pause</label><input type="number" id="edit-pause" min="0" value="' + (e.pause || 0) + '"></div>';
+            html += '</div>';
+            html += '<div><label>Notiz</label><input type="text" id="edit-note" value="' + (e.note || '').replace(/"/g, '&quot;') + '" placeholder="Optional"></div>';
+            html += '<div class="edit-actions">';
+            html += '<button class="btn btn-ghost btn-xs" onclick="cancelEdit()">Abbrechen</button>';
+            html += '<button class="btn btn-primary btn-xs" onclick="saveEdit(\'' + e.id + '\')">Speichern</button>';
+            html += '</div>';
+            html += '</div>';
           } else {
-            html += '<button class="entry-del" onclick="confirmDel(\'' + e.id + '\')">✕</button>';
+            // Normal display
+            html += '<div class="entry-row">';
+            html += '<div style="cursor:pointer" onclick="startEdit(\'' + e.id + '\')">';
+            html += '<div class="entry-time">';
+            if (currentView !== "day") html += '<span class="dim">' + fmtDateShort(e.date) + '</span>';
+            html += '<span>' + e.from + ' – ' + e.to + '</span>';
+            if (e.pause > 0) html += '<span class="muted">(' + e.pause + '′ Pause)</span>';
+            html += '</div>';
+            if (e.note) html += '<div class="entry-note">' + e.note + '</div>';
+            html += '</div>';
+            html += '<div class="flex-center">';
+            html += '<span class="entry-dur">' + fmtDur(dur) + '</span>';
+            html += '<button class="entry-edit" onclick="startEdit(\'' + e.id + '\')" title="Bearbeiten">✎</button>';
+            if (confirmDelId === e.id) {
+              html += '<button class="btn btn-danger btn-xs" onclick="deleteEntry(\'' + e.id + '\')">Löschen?</button>';
+            } else {
+              html += '<button class="entry-del" onclick="confirmDel(\'' + e.id + '\')">✕</button>';
+            }
+            html += '</div></div>';
           }
-          html += '</div></div>';
         });
 
         html += '</div>';
@@ -389,11 +421,27 @@
       listEl.innerHTML = html;
     }
 
-    function confirmDel(id) { confirmDelId = id; renderOverview(); }
+    function confirmDel(id) { confirmDelId = id; editId = null; renderOverview(); }
     function deleteEntry(id) {
       entries = entries.filter(function(e) { return e.id !== id; });
       save();
       confirmDelId = null;
+      editId = null;
+      renderOverview();
+    }
+
+    function startEdit(id) { editId = id; confirmDelId = null; renderOverview(); }
+    function cancelEdit() { editId = null; renderOverview(); }
+    function saveEdit(id) {
+      var entry = entries.find(function(e) { return e.id === id; });
+      if (!entry) return;
+      entry.date = document.getElementById("edit-date").value;
+      entry.from = document.getElementById("edit-from").value;
+      entry.to = document.getElementById("edit-to").value;
+      entry.pause = parseInt(document.getElementById("edit-pause").value) || 0;
+      entry.note = document.getElementById("edit-note").value;
+      save();
+      editId = null;
       renderOverview();
     }
 
