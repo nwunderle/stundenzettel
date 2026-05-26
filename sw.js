@@ -1,4 +1,4 @@
-const CACHE_NAME = 'garderobe-v2';
+const CACHE_NAME = 'garderobe-v3';
 const urlsToCache = [
   '.',
   'index.html',
